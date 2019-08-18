@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 
-class vec3
-{
+class vec3 {
     public:
         float e[3];
 

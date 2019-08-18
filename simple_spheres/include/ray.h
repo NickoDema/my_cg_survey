@@ -10,8 +10,7 @@
    A - is the ray origin
    B - is the ray direction
 */
-class ray
-{
+class ray {
     public:
         vec3 A;
         vec3 B;
