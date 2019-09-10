@@ -28,7 +28,7 @@ int main () {
 
    int nx = 1200;
    int ny = 600;
-   int ns = 4;
+   int ns = 100;
    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
 
    hitable *list[2];
