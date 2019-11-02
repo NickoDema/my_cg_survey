@@ -43,10 +43,11 @@ int main () {
    int ns = 20;
    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
 
-   Hitable* list[2];
-   list[0] = new Sphere(vec3(0, 0, -1), 0.2);
-   list[1] = new Sphere(vec3(0, -2.2, -1), 2);
-   Hitable *world = new Hitable_list(list, 2);
+   Hitable* list[3];
+   list[0] = new Sphere(vec3(0, 0, -1.2), 0.2);
+   list[1] = new Sphere(vec3(0, -2.4, -2.8), 2.6);
+   list[2] = new Sphere(vec3(0.2, 0.06, -0.8), 0.1);
+   Hitable *world = new Hitable_list(list, 3);
 
    Camera cam;
    for (int j = ny-1; j >= 0; j--) {
@@ -56,12 +57,10 @@ int main () {
             float u = float(i + rand_dist(rand_engine)) / float(nx);
             float v = float(j + rand_dist(rand_engine)) / float(ny);
             ray r = cam.get_ray(u, v);
-            // vec3 p = r.point_at_param(1.0);
-            // std::cout << "p: " << p << "\n";
             col += color(r, world);
          }
          col /= float(ns);
-         // col = vec3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
+         col = vec3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
          int r_int = int(240*col.r());
          int g_int = int(240*col.g());
          int b_int = int(240*col.b());
