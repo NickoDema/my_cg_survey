@@ -9,3 +9,7 @@
 ### Spheres with ideal diffuse and specular reflection
 
 ![](pics/diff_and_metal.png)
+
+### Glass spheres
+
+![](pics/diff_and_metal_glass.png)

@@ -29,8 +29,8 @@ vec3 color(const ray& r, Hitable *world, int depth) {
 
 int main () {
 
-   int nx = 1200;
-   int ny = 600;
+   int nx = 1600;
+   int ny = 800;
    int ns = 200;
    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
 
@@ -40,12 +40,15 @@ int main () {
    // list[2] = new Sphere(vec3(0.2, 0.06, -0.8), 0.1);
    // Hitable *world = new Hitable_list(list, 3);
 
-   Hitable* list[4];
-   list[0] = new Sphere(vec3(0, 0, -2), 0.5, new Lambertian(vec3(0.2, 0.8, 0.3)));
-   list[1] = new Sphere(vec3(0, -100.5, -2), 100, new Lambertian(vec3(0.2, 0.2, 0.2)));
-   list[2] = new Sphere(vec3(1.2, 0, -2.5), 0.5, new Metal(vec3(0.8, 0.6, 0.2)));
-   list[3] = new Sphere(vec3(-1.1, 0, -1.8), 0.5, new Metal(vec3(0.8, 0.8, 0.8)));
-   Hitable *world = new Hitable_list(list, 4);
+   Hitable* list[7];
+   list[0] = new Sphere(vec3(0, -0.6, -4), 0.5, new Lambertian(vec3(0.2, 0.8, 0.3)));
+   list[1] = new Sphere(vec3(-0.2, 0.15, -3.3), 0.06, new Dielectric(1.3));
+   list[2] = new Sphere(vec3(0.8, 0, -4.8), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.0));
+   list[3] = new Sphere(vec3(-1.1, 0, -4.2), 0.5, new Metal(vec3(0.8, 0.8, 0.8), 0.0));
+   list[4] = new Sphere(vec3(-0.3, -0.26, -3), 0.1, new Dielectric(1.1));
+   list[5] = new Sphere(vec3(0.3, 0.1, -4.3), 0.2, new Dielectric(1.4));
+   list[6] = new Sphere(vec3(0, -201.5, -2), 200, new Lambertian(vec3(0.2, 0.2, 0.2)));
+   Hitable *world = new Hitable_list(list, 7);
 
    Camera cam;
    for (int j = ny-1; j >= 0; j--) {
