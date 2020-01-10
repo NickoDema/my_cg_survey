@@ -7,6 +7,9 @@
 CFLAGS = -std=c++17 #-I$(VULKAN_HEADERS)
 LDFLAGS =  `pkg-config --static --libs glfw3` -lvulkan
 
+triangle_render: triangle.cpp
+	g++ $(CFLAGS) -o triangle_render triangle.cpp $(LDFLAGS)
+
 VulkanTest: main.cpp
 	g++ $(CFLAGS) -o VulkanTest main.cpp $(LDFLAGS)
 
@@ -16,4 +19,4 @@ test: VulkanTest
 	./VulkanTest
 
 clean:
-	rm -f VulkanTest
+	rm -f VulkanTest triangle_render
