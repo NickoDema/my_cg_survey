@@ -19,6 +19,19 @@ const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
 
+struct QueueFamilyIndices {
+    bool graphicsAvailable = false;
+    uint32_t graphicsFamily;
+
+    bool isGraphicsAvailable() {
+        return graphicsAvailable;
+    }
+
+    bool setGraphicsAvailable() {
+        graphicsAvailable = true;
+    }
+};
+
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 
@@ -42,7 +55,7 @@ private:
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan", nullptr, nullptr);
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkaned", nullptr, nullptr);
     }
 
 
@@ -111,8 +124,50 @@ private:
             std::cout << "\t\t" << "geometry shader: yes" << std::endl;
         }
 
+        if (!isDeviceSuitableByQueueFamily(device)) {
+            return 0;
+        }
+
         std::cout << "\t\t" << "total score: " << score << std::endl;
         return score;
+    }
+
+
+    bool isDeviceSuitableByQueueFamily(VkPhysicalDevice device) {
+        QueueFamilyIndices indices;
+
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamiliesProperties.data());
+
+        std::cout << "\t\t" << "supported operations: " << std::endl;
+
+        int i = 0;
+        for (const auto& queueFamilyProperties : queueFamiliesProperties) {
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                std::cout << "\t\t\t" << "queue family id: " << i << " graphics" << std::endl;
+                indices.graphicsFamily = i;
+                indices.setGraphicsAvailable();
+            }
+
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+                std::cout << "\t\t\t" << "queue family id: " << i << " computation" << std::endl;
+            }
+
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+                std::cout << "\t\t\t" << "queue family id: " << i << " transfer" << std::endl;
+            }
+
+            if (queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+                std::cout << "\t\t\t" << "queue family id: " << i << " sparse memory management" << std::endl;
+            }
+
+            i++;
+        }
+
+        return indices.isGraphicsAvailable();
     }
 
 
