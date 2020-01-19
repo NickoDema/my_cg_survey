@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <vector>
 #include <cstring>
+#include <map>
 
 
 #ifdef NO_DEBUG
@@ -33,6 +34,7 @@ public:
 private:
     GLFWwindow* window;
     VkInstance instance;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
     void initWindow() {
         glfwInit();
@@ -43,11 +45,76 @@ private:
         window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
+
     void initVulkan() {
         createInstance();
         // setupDebugMessenger();
         pickPhysicalDevice();
     }
+
+
+    void pickPhysicalDevice() {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+        if (deviceCount == 0) {
+            throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        }
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+        std::cout << "available physical devices:" << std::endl;
+
+        std::multimap<int, VkPhysicalDevice> candidates;
+
+        for (const auto& device : devices) {
+            int score = rateDeviceSuitability(device);
+            candidates.insert(std::make_pair(score, device));
+        }
+
+        if (candidates.rbegin()->first > 0) {
+            physicalDevice = candidates.rbegin()->second;
+        } else {
+            throw std::runtime_error("failed to find a suitable GPU!");
+        }
+    }
+
+
+    int rateDeviceSuitability(VkPhysicalDevice device) {
+
+        VkPhysicalDeviceProperties deviceProperties;
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+        int score = 0;
+
+        std::cout << "\t" << deviceProperties.deviceName << std::endl;
+
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            score += 1000;
+            std::cout << "\t\t" << "type: discrete" << std::endl;
+        }
+
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+            score += 100;
+            std::cout << "\t\t" << "type: integrated" << std::endl;
+        }
+
+        score += deviceProperties.limits.maxImageDimension2D;
+        std::cout << "\t\t" << "max image dimention (2D): " << deviceProperties.limits.maxImageDimension2D << std::endl;
+
+        if (!deviceFeatures.geometryShader) {
+            std::cout << "\t\t" << "geometry shader: no" << std::endl;
+            return 0;
+        } else {
+            std::cout << "\t\t" << "geometry shader: yes" << std::endl;
+        }
+
+        std::cout << "\t\t" << "total score: " << score << std::endl;
+        return score;
+    }
+
 
     void createInstance() {
 
@@ -99,6 +166,7 @@ private:
 
     }
 
+
     bool checkValidationLayerSupport() {
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -130,11 +198,13 @@ private:
         return true;
     }
 
+
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
         }
     }
+
 
     void cleanup() {
         vkDestroyInstance(instance, nullptr);
@@ -142,6 +212,7 @@ private:
         glfwTerminate();
     }
 };
+
 
 int main() {
     TriangleApp app;

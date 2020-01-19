@@ -30,3 +30,4 @@
 *.exe
 *.out
 *.app
+vulkan/glfw_glm_simple_test/triangle_render
