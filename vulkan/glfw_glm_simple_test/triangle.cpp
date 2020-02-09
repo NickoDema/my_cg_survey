@@ -3,6 +3,7 @@
 
 // #define NO_DEBUG
 
+#include <memory>
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
@@ -17,25 +18,39 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
+
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
 
-struct QueueFamilyIndices {
+
+class QueueFamily {
+public:
+    inline void     setFamilyIdx(uint32_t idx) { familyIdx = idx; }
+    inline uint32_t getFamilyIdx()             { return familyIdx; }
+
+    inline void setGraphicsAvailable()     { graphicsAvailable = true; }
+    inline void setComputationsAvailable() { computationsAvailable = true; }
+    inline void setTransferAvailable()     { transferAvailable = true; }
+    inline void setSparseMemoryAvailable() { sparseMemoryAvailable = true; }
+
+    inline bool isGraphicsAvailable()     const { return graphicsAvailable; }
+    inline bool isComputationsAvailable() const { return computationsAvailable; }
+    inline bool isTransferAvailable()     const { return transferAvailable; }
+    inline bool isSparseMemoryAvailable() const { return sparseMemoryAvailable; }
+
+    uint32_t familyIdx;
+    VkQueueFamilyProperties properties;
+
     bool graphicsAvailable = false;
-    uint32_t graphicsFamily;
+    bool computationsAvailable = false;
+    bool transferAvailable = false;
+    bool sparseMemoryAvailable = false;
 
-    bool isGraphicsAvailable() {
-        return graphicsAvailable;
-    }
-
-    bool setGraphicsAvailable() {
-        graphicsAvailable = true;
-    }
 };
 
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 600;
 
 class TriangleApp {
 public:
@@ -51,8 +66,9 @@ private:
     VkInstance instance;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
+    QueueFamily graphicsQueueFamily;
     VkDevice device;
-    VkQueue  graphicsQueue;
+    VkQueue graphicsQueue;
 
     void initWindow() {
         glfwInit();
@@ -220,7 +236,9 @@ private:
             std::cout << "\t\t" << "geometry shader: yes" << std::endl;
         }
 
-        if (!isDeviceSuitableByOperationType(device, VK_QUEUE_GRAPHICS_BIT)) {
+        if (std::shared_ptr<QueueFamily> requiredQueueFamily = findQueueFamilyByOperationType(device, VK_QUEUE_GRAPHICS_BIT)) {
+            graphicsQueueFamily = *requiredQueueFamily;
+        } else {
             score =  0;
         }
 
@@ -229,60 +247,74 @@ private:
     }
 
 
-    bool isDeviceSuitableByOperationType(VkPhysicalDevice device, VkQueueFlagBits queueType) {
-        QueueFamilyIndices indices;
+    std::shared_ptr<QueueFamily> findQueueFamilyByOperationType (VkPhysicalDevice device, VkQueueFlagBits queueType) {
 
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+        std::vector<std::shared_ptr<QueueFamily>> queueFamilies = findQueueFamilies(device);
 
-        std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamiliesProperties.data());
+        // std::shared_ptr<QueueFamily> resultQueueFamily;
+
+        for (const auto queueFamily : queueFamilies) {
+
+            if (queueFamily->properties.queueFlags & queueType) {
+                return queueFamily;
+                }
+        }
+
+        return nullptr;
+    }
+
+
+    std::vector<std::shared_ptr<QueueFamily>> findQueueFamilies (VkPhysicalDevice device) {
+
+        std::vector<std::shared_ptr<QueueFamily>> queueFamilies;
+
+        uint32_t queueFamiliesCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, queueFamiliesProperties.data());
 
         std::cout << "\t\t" << "supported operations: " << std::endl;
 
         int i = 0;
         for (const auto& queueFamilyProperties : queueFamiliesProperties) {
 
-            if (queueFamilyProperties.queueFlags & queueType) {
-                if (!indices.isGraphicsAvailable()) {
-                    indices.graphicsFamily = i;
-                    indices.setGraphicsAvailable();
-                }
-            }
+            QueueFamily queueFamily;
+            queueFamily.setFamilyIdx(i);
 
             if (queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 std::cout << "\t\t\t" << "queue family id: " << i << " graphics" << std::endl;
-                if (!indices.isGraphicsAvailable()) {
-                    indices.graphicsFamily = i;
-                    indices.setGraphicsAvailable();
-                }
+                queueFamily.setGraphicsAvailable();
             }
 
             if (queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) {
                 std::cout << "\t\t\t" << "queue family id: " << i << " computation" << std::endl;
+                queueFamily.setComputationsAvailable();
             }
 
             if (queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT) {
                 std::cout << "\t\t\t" << "queue family id: " << i << " transfer" << std::endl;
+                queueFamily.setTransferAvailable();
             }
 
             if (queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) {
                 std::cout << "\t\t\t" << "queue family id: " << i << " sparse memory management" << std::endl;
+                queueFamily.setSparseMemoryAvailable();
             }
-
+            queueFamily.properties = queueFamilyProperties;
+            queueFamilies.push_back(std::make_shared<QueueFamily>(queueFamily));
             i++;
         }
 
-        return indices.isGraphicsAvailable();
+        return queueFamilies;
     }
 
 
     void createLogicalDevice() {
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
         VkDeviceQueueCreateInfo queueCreateInfo = {};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
+        queueCreateInfo.queueFamilyIndex = graphicsQueueFamily.getFamilyIdx();
         queueCreateInfo.queueCount = 1;
 
         float queuePriority = 1.0f;
@@ -311,33 +343,7 @@ private:
             throw std::runtime_error("failed to create logical device!");
         }
 
-        vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
-    }
-
-
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
-        QueueFamilyIndices indices;
-
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-        int i = 0;
-        for (const auto& queueFamily : queueFamilies) {
-            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                indices.graphicsFamily = i;
-            }
-
-            if (indices.isGraphicsAvailable()) {
-                break;
-            }
-
-            i++;
-        }
-
-        return indices;
+        vkGetDeviceQueue(device, graphicsQueueFamily.getFamilyIdx(), 0, &graphicsQueue);
     }
 
 
